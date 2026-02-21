@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERM 3 FINAL EXAM - MISSION CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* =========================================================
+           1. VARIABLES & BASE SETUP
+           ========================================================= */
+        :root {
+            --c-bg: #050a0e;
+            --c-panel: rgba(10, 20, 30, 0.7);
+            --c-main: #00f3ff;
+            --c-main-dim: rgba(0, 243, 255, 0.2);
+            --c-success: #00ff66;
+            --c-success-dim: rgba(0, 255, 102, 0.2);
+            --c-warning: #ffb700;
+            --c-text: #b0c4de;
+            --font-sys: 'Share Tech Mono', monospace;
+            --font-jp: 'Noto Sans JP', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-jp); line-height: 1.6; overflow-x: hidden; min-height: 100vh; }
+        
+        /* 画面全体のスキャンライン＆ノイズ */
+        .scanlines { position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; opacity: 0.4; }
+        .vignette { position: fixed; inset: 0; z-index: 9998; pointer-events: none; background: radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.8) 100%); }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+
+        .container { width: 95%; max-width: 1200px; margin: 0 auto; padding: 40px 0; position: relative; z-index: 10; }
+
+        /* =========================================================
+           2. HEADER & MAIN PROGRESS (巨大な円形ゲージ)
+           ========================================================= */
+        header { text-align: center; margin-bottom: 50px; }
+        .title-sys { font-family: var(--font-sys); color: var(--c-main); font-size: 1.2rem; letter-spacing: 0.3em; text-shadow: 0 0 10px var(--c-main); animation: pulse 2s infinite; }
+        .title-main { font-size: 2.5rem; font-weight: 900; color: #fff; margin: 10px 0; letter-spacing: 0.1em; }
+        
+        .progress-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto 50px; display: flex; justify-content: center; align-items: center; }
+        .progress-svg { transform: rotate(-90deg); width: 100%; height: 100%; filter: drop-shadow(0 0 15px var(--c-main)); transition: filter 0.5s; }
+        .progress-bg { fill: none; stroke: var(--c-main-dim); stroke-width: 8; }
+        .progress-bar { fill: none; stroke: var(--c-main); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 816; stroke-dashoffset: 816; transition: stroke-dashoffset 1s cubic-bezier(0.68, -0.55, 0.265, 1.55), stroke 0.5s; }
+        
+        .progress-text { position: absolute; text-align: center; }
+        .progress-val { font-family: var(--font-sys); font-size: 4rem; font-weight: bold; color: #fff; text-shadow: 0 0 20px var(--c-main); transition: color 0.5s, text-shadow 0.5s; display: flex; align-items: baseline; justify-content: center; }
+        .progress-val span { font-size: 2rem; color: var(--c-main); }
+        .progress-label { font-family: var(--font-sys); font-size: 0.8rem; color: var(--c-main); letter-spacing: 0.2em; }
+
+        /* =========================================================
+           3. TASK CARDS (教科ごとのミッションパネル)
+           ========================================================= */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        
+        .card { background: var(--c-panel); border: 1px solid var(--c-main-dim); border-radius: 8px; padding: 25px; position: relative; overflow: hidden; backdrop-filter: blur(10px); transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--c-main), transparent); transform: translateX(-100%); transition: 0.5s; }
+        .card:hover { border-color: var(--c-main); box-shadow: 0 10px 30px rgba(0, 243, 255, 0.2); transform: translateY(-5px); }
+        .card:hover::before { transform: translateX(100%); }
+        .card.all-cleared { border-color: var(--c-success); box-shadow: 0 0 20px var(--c-success-dim); }
+        .card.all-cleared::before { background: linear-gradient(90deg, transparent, var(--c-success), transparent); }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px dashed var(--c-main-dim); padding-bottom: 10px; margin-bottom: 15px; transition: border-color 0.3s; }
+        .card.all-cleared .card-header { border-bottom-color: var(--c-success-dim); }
+        
+        .subj-name { font-size: 1.5rem; font-weight: 900; color: #fff; }
+        .subj-date { font-family: var(--font-sys); font-size: 0.8rem; color: var(--c-main); background: var(--c-main-dim); padding: 2px 8px; border-radius: 4px; }
+        
+        /* タスク項目（チェックボックスギミック） */
+        .task-item { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; cursor: pointer; padding: 10px; border-radius: 6px; transition: 0.3s; background: rgba(255,255,255,0.02); border: 1px solid transparent; }
+        .task-item:hover { background: rgba(0, 243, 255, 0.05); border-color: var(--c-main-dim); }
+        
+        .checkbox { flex-shrink: 0; width: 24px; height: 24px; border: 2px solid var(--c-main); border-radius: 4px; position: relative; transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; justify-content: center; align-items: center; box-shadow: 0 0 10px var(--c-main-dim); }
+        .checkbox::after { content: '✓'; font-family: sans-serif; font-size: 18px; font-weight: bold; color: var(--c-bg); opacity: 0; transform: scale(0); transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        
+        .task-content { flex: 1; }
+        .task-text { font-size: 0.95rem; color: #ddd; transition: 0.3s; line-height: 1.4; margin-bottom: 5px; }
+        .task-deadline { font-family: var(--font-sys); font-size: 0.75rem; color: var(--c-warning); display: flex; align-items: center; gap: 5px; }
+        .task-deadline::before { content: 'DEADLINE:'; opacity: 0.7; }
+
+        /* チェックされた時の状態 */
+        .task-item.checked { background: rgba(0, 255, 102, 0.05); border-color: var(--c-success-dim); }
+        .task-item.checked .checkbox { background: var(--c-success); border-color: var(--c-success); box-shadow: 0 0 15px var(--c-success); transform: rotate(360deg); }
+        .task-item.checked .checkbox::after { opacity: 1; transform: scale(1); }
+        .task-item.checked .task-text { color: #555; text-decoration: line-through; }
+        .task-item.checked .task-deadline { color: #555; }
+
+        /* =========================================================
+           4. SAVE NOTIFICATION (保存時のトースト演出)
+           ========================================================= */
+        #sync-toast { position: fixed; bottom: 30px; right: -300px; background: rgba(0, 243, 255, 0.1); border: 1px solid var(--c-main); border-left: 4px solid var(--c-main); padding: 15px 25px; font-family: var(--font-sys); color: var(--c-main); display: flex; align-items: center; gap: 15px; box-shadow: 0 0 20px var(--c-main-dim); z-index: 10000; transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); backdrop-filter: blur(5px); }
+        #sync-toast.show { right: 30px; }
+        .spinner { width: 16px; height: 16px; border: 2px solid transparent; border-top-color: var(--c-main); border-radius: 50%; animation: spin 1s linear infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAYS -->
+    <canvas id="bg-canvas"></canvas>
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="title-sys">> SYSTEM.OVERRIDE_</div>
+            <h1 class="title-main">3RD TERM FINAL EXAM</h1>
+            <div class="title-sys" style="font-size: 0.8rem; color: #888; text-shadow: none;">令和7年度 第2学年 期末考査 提出物管理ダッシュボード</div>
+        </header>
+
+        <!-- MAIN PROGRESS -->
+        <div class="progress-wrapper" id="progressWrapper">
+            <svg class="progress-svg" viewBox="0 0 300 300">
+                <circle class="progress-bg" cx="150" cy="150" r="130"></circle>
+                <circle class="progress-bar" id="progressBar" cx="150" cy="150" r="130"></circle>
+            </svg>
+            <div class="progress-text">
+                <div class="progress-val"><span id="progressNum">0</span><span>%</span></div>
+                <div class="progress-label">GLOBAL SYNC RATE</div>
+            </div>
+        </div>
+
+        <!-- TASK GRID -->
+        <div class="grid" id="taskGrid">
+            <!-- JavaScriptでここにカードが生成されます -->
+        </div>
+    </div>
+
+    <!-- SAVING TOAST -->
+    <div id="sync-toast">
+        <div class="spinner"></div>
+        <div>
+            <div style="font-size: 0.7rem; color:#888;">LOCAL_STORAGE</div>
+            <div style="font-weight: bold; font-size: 0.9rem;">DATA SYNCHRONIZED</div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // 1. DATA (画像から抽出した提出物データ)
+        // =========================================================
+        const subjects = [
+            {
+                id: 'pe', date: '25日(水)', name: '保健体育',
+                tasks: [ { id: 't_pe_1', desc: 'ノート：p.6〜7, p.10, p.24〜27, 30, 32〜37, 48', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'soc', date: '25日(水)', name: '社会',
+                tasks: [ { id: 't_soc_1', desc: '【歴史の学習】p.18〜23を【歴史の学習ノート】p.10〜12にして、答え合わせをして提出する', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'eng', date: '26日(木)', name: '英語',
+                tasks: [ { id: 't_eng_1', desc: 'エイゴラボ p.148〜160 答え合わせをする (早く終わったら授業で提出)', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'jp', date: '26日(木)', name: '国語',
+                tasks: [ { id: 't_jp_1', desc: 'ワーク P.95〜102、103、104、119、143、144〜159', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'mus', date: '26日(木)', name: '音楽',
+                tasks: [ { id: 't_mus_1', desc: 'ワーク p.23、44、49、55、56 (解説や教科書を参考に取り組む)', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'math', date: '27日(金)', name: '数学',
+                tasks: [ { id: 't_math_1', desc: 'ワーク P119まで', deadline: '★ 2月20日まで ★' } ]
+            },
+            {
+                id: 'tech', date: '27日(金)', name: '技術',
+                tasks: [ { id: 't_tech_1', desc: 'ノート P60〜61、69', deadline: 'テスト終了後の反省会' } ]
+            },
+            {
+                id: 'home', date: '27日(金)', name: '家庭科',
+                tasks: [
+                    { id: 't_home_1', desc: '【全員】ノート（消費生活）P4〜13、16〜21、36〜37⑤まで', deadline: 'テスト終了後の反省会' },
+                    { id: 't_home_2', desc: '【全員】ワーク P48〜50、62〜64', deadline: 'テスト終了後の反省会' },
+                    { id: 't_home_3', desc: '【未提出者】プリント2枚(冬休み課題等)、ノート(緑)P38〜40', deadline: 'テスト終了後の反省会' }
+                ]
+            },
+            {
+                id: 'sci', date: '27日(金)', name: '理科',
+                tasks: [ { id: 't_sci_1', desc: 'ワークP122〜137、34〜47をすべてやり、答え合わせ', deadline: 'テスト当日 (P122〜137先行提出可)' } ]
+            }
+        ];
+
+        // =========================================================
+        // 2. AUDIO ENGINE (サイバーな操作音を生成)
+        // =========================================================
+        const AudioEngine = (() => {
+            let ctx = null;
+            const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
+            const play = (freq, type, dur, vol) => {
+                if (!ctx) return;
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + dur);
+            };
+            return {
+                init,
+                check: () => play(1200, 'sine', 0.1, 0.1),
+                uncheck: () => play(400, 'square', 0.1, 0.05),
+                complete: () => { play(800, 'sine', 0.1, 0.1); setTimeout(()=>play(1200, 'sine', 0.2, 0.1), 100); setTimeout(()=>play(1600, 'sine', 0.4, 0.1), 200); }
+            };
+        })();
+
+        // =========================================================
+        // 3. UI GENERATION & LOGIC
+        // =========================================================
+        const grid = document.getElementById('taskGrid');
+        const progressBar = document.getElementById('progressBar');
+        const progressNum = document.getElementById('progressNum');
+        const progressWrapper = document.getElementById('progressWrapper');
+        const toast = document.getElementById('sync-toast');
+        
+        // LocalStorageからセーブデータを読み込む
+        const STORAGE_KEY = 'exam_mission_save_data';
+        let savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        let totalTasks = 0;
+
+        // カードとタスクの生成
+        subjects.forEach(subj => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card_${subj.id}`;
+            
+            let tasksHtml = '';
+            subj.tasks.forEach(t => {
+                totalTasks++;
+                const isChecked = savedData[t.id] ? 'checked' : '';
+                tasksHtml += `
+                    <div class="task-item ${isChecked}" data-id="${t.id}" data-parent="card_${subj.id}">
+                        <div class="checkbox"></div>
+                        <div class="task-content">
+                            <div class="task-text">${t.desc}</div>
+                            <div class="task-deadline">${t.deadline}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="subj-name">${subj.name}</div>
+                    <div class="subj-date">${subj.date}</div>
+                </div>
+                ${tasksHtml}
+            `;
+            grid.appendChild(card);
+        });
+
+        // 進捗の計算と描画アニメーション
+        let currentPercent = 0;
+        function updateProgress() {
+            const checkedBoxes = document.querySelectorAll('.task-item.checked').length;
+            const targetPercent = Math.round((checkedBoxes / totalTasks) * 100);
+            
+            // 円形ゲージの更新 (Dash array max: 816)
+            const offset = 816 - (816 * targetPercent) / 100;
+            progressBar.style.strokeDashoffset = offset;
+
+            // 数字のカウントアップアニメーション（スロット風）
+            const duration = 1000; 
+            const startTime = performance.now();
+            const startVal = currentPercent;
+            
+            function animateNum(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // イージング
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                currentPercent = Math.floor(startVal + (targetPercent - startVal) * easeOut);
+                progressNum.innerText = currentPercent;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateNum);
+                } else {
+                    currentPercent = targetPercent;
+                    checkAllCleared(targetPercent);
+                }
+            }
+            requestAnimationFrame(animateNum);
+
+            // 各カードがコンプリートされたかどうかの判定
+            subjects.forEach(subj => {
+                const card = document.getElementById(`card_${subj.id}`);
+                const tasksInCard = card.querySelectorAll('.task-item');
+                const checkedInCard = card.querySelectorAll('.task-item.checked');
+                if (tasksInCard.length === checkedInCard.length && tasksInCard.length > 0) {
+                    card.classList.add('all-cleared');
+                } else {
+                    card.classList.remove('all-cleared');
+                }
+            });
+        }
+
+        // 全タスク完了時のエフェクト
+        function checkAllCleared(percent) {
+            if (percent === 100) {
+                AudioEngine.complete();
+                progressBar.style.stroke = 'var(--c-success)';
+                progressNum.style.color = 'var(--c-success)';
+                progressNum.style.textShadow = '0 0 30px var(--c-success)';
+                progressWrapper.querySelector('.progress-svg').style.filter = 'drop-shadow(0 0 30px var(--c-success))';
+                progressWrapper.querySelector('.progress-label').style.color = 'var(--c-success)';
+                progressWrapper.querySelector('.progress-label').innerText = 'MISSION ACCOMPLISHED';
+            } else {
+                progressBar.style.stroke = 'var(--c-main)';
+                progressNum.style.color = '#fff';
+                progressNum.style.textShadow = '0 0 20px var(--c-main)';
+                progressWrapper.querySelector('.progress-svg').style.filter = 'drop-shadow(0 0 15px var(--c-main))';
+                progressWrapper.querySelector('.progress-label').style.color = 'var(--c-main)';
+                progressWrapper.querySelector('.progress-label').innerText = 'GLOBAL SYNC RATE';
+            }
+        }
+
+        // 保存（LocalStorage）とトースト通知
+        let toastTimeout;
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
+            
+            // トースト表示
+            clearTimeout(toastTimeout);
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // クリックイベントの登録
+        document.body.addEventListener('click', AudioEngine.init, { once: true });
+
+        document.querySelectorAll('.task-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const taskId = this.getAttribute('data-id');
+                const isChecked = this.classList.contains('checked');
+                
+                if (isChecked) {
+                    this.classList.remove('checked');
+                    delete savedData[taskId];
+                    AudioEngine.uncheck();
+                } else {
+                    this.classList.add('checked');
+                    savedData[taskId] = true;
+                    AudioEngine.check();
+                }
+                
+                updateProgress();
+                saveData();
+            });
+        });
+
+        // 初回ロード時の描画
+        updateProgress();
+
+        // =========================================================
+        // 4. BACKGROUND CANVAS (サイバーなドット/マトリックス背景)
+        // =========================================================
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let w, h, particles = [];
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Dot {
+            constructor() {
+                this.x = Math.random() * w; this.y = Math.random() * h;
+                this.vy = Math.random() * 0.5 + 0.1;
+                this.size = Math.random() * 1.5;
+                this.alpha = Math.random() * 0.5;
+            }
+            update() {
+                this.y += this.vy;
+                if (this.y > h) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(0, 243, 255, ${this.alpha})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        for (let i = 0; i < 150; i++) particles.push(new Dot());
+
+        function animateBg() {
+            ctx.clearRect(0, 0, w, h);
+            
+            // うっすらとした縦ライン（データストリーム）
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.02)';
+            for(let i=0; i<w; i+=50) { ctx.fillRect(i, 0, 1, h); }
+            
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+    </script>
+</body>
+</html>
