@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TERM 3 FINAL EXAM - MISSION CONTROL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>当日提出専用 - MISSION PROGRESS</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
@@ -11,185 +11,129 @@
            1. VARIABLES & BASE SETUP
            ========================================================= */
         :root {
-            --c-bg: #050a0e;
-            --c-panel: rgba(10, 20, 30, 0.7);
-            --c-main: #00f3ff;
-            --c-main-dim: rgba(0, 243, 255, 0.2);
-            --c-success: #00ff66;
-            --c-success-dim: rgba(0, 255, 102, 0.2);
-            --c-warning: #ffb700;
-            --c-text: #b0c4de;
+            --c-bg: #0b0f19;
+            --c-panel: rgba(20, 25, 40, 0.8);
+            --c-main: #00e5ff;
+            --c-main-dim: rgba(0, 229, 255, 0.2);
+            --c-success: #00ff88;
+            --c-danger: #ff2a55;
+            --c-text: #c5d0e6;
             --font-sys: 'Share Tech Mono', monospace;
             --font-jp: 'Noto Sans JP', sans-serif;
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        html { scroll-behavior: smooth; }
-        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-jp); line-height: 1.6; overflow-x: hidden; min-height: 100vh; }
-        
-        /* 画面全体のスキャンライン＆ノイズ */
-        .scanlines { position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; opacity: 0.4; }
-        .vignette { position: fixed; inset: 0; z-index: 9998; pointer-events: none; background: radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.8) 100%); }
-        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-jp); min-height: 100vh; overflow-x: hidden; }
 
-        .container { width: 95%; max-width: 1200px; margin: 0 auto; padding: 40px 0; position: relative; z-index: 10; }
+        /* 背景エフェクト */
+        .scanlines { position: fixed; inset: 0; z-index: 9000; pointer-events: none; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%); background-size: 100% 4px; opacity: 0.5; }
+        .bg-glow { position: fixed; top: 0; left: 50%; width: 100vw; height: 100vh; transform: translateX(-50%); background: radial-gradient(circle at top, rgba(0,229,255,0.1) 0%, transparent 60%); z-index: -1; pointer-events: none; }
+
+        .container { width: 95%; max-width: 800px; margin: 0 auto; padding: 30px 0 100px; position: relative; z-index: 10; }
 
         /* =========================================================
-           2. HEADER & MAIN PROGRESS (巨大な円形ゲージ)
+           2. HEADER & GLOBAL PROGRESS
            ========================================================= */
-        header { text-align: center; margin-bottom: 50px; }
-        .title-sys { font-family: var(--font-sys); color: var(--c-main); font-size: 1.2rem; letter-spacing: 0.3em; text-shadow: 0 0 10px var(--c-main); animation: pulse 2s infinite; }
-        .title-main { font-size: 2.5rem; font-weight: 900; color: #fff; margin: 10px 0; letter-spacing: 0.1em; }
-        
-        .progress-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto 50px; display: flex; justify-content: center; align-items: center; }
-        .progress-svg { transform: rotate(-90deg); width: 100%; height: 100%; filter: drop-shadow(0 0 15px var(--c-main)); transition: filter 0.5s; }
-        .progress-bg { fill: none; stroke: var(--c-main-dim); stroke-width: 8; }
-        .progress-bar { fill: none; stroke: var(--c-main); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 816; stroke-dashoffset: 816; transition: stroke-dashoffset 1s cubic-bezier(0.68, -0.55, 0.265, 1.55), stroke 0.5s; }
-        
-        .progress-text { position: absolute; text-align: center; }
-        .progress-val { font-family: var(--font-sys); font-size: 4rem; font-weight: bold; color: #fff; text-shadow: 0 0 20px var(--c-main); transition: color 0.5s, text-shadow 0.5s; display: flex; align-items: baseline; justify-content: center; }
-        .progress-val span { font-size: 2rem; color: var(--c-main); }
-        .progress-label { font-family: var(--font-sys); font-size: 0.8rem; color: var(--c-main); letter-spacing: 0.2em; }
+        header { text-align: center; margin-bottom: 40px; }
+        .title-sys { font-family: var(--font-sys); color: var(--c-main); font-size: 1rem; letter-spacing: 0.2em; text-shadow: 0 0 10px var(--c-main-dim); }
+        .title-main { font-size: 2rem; font-weight: 900; color: #fff; margin: 5px 0; letter-spacing: 0.05em; }
+        .badge-today { display: inline-block; background: var(--c-danger); color: #fff; font-family: var(--font-sys); font-size: 0.8rem; padding: 2px 10px; border-radius: 4px; box-shadow: 0 0 10px var(--c-danger); margin-bottom: 10px; letter-spacing: 0.1em; }
+
+        /* 全体進捗バー */
+        .global-progress-box { background: rgba(0,0,0,0.6); border: 1px solid var(--c-main-dim); height: 40px; border-radius: 20px; position: relative; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.5); margin-bottom: 40px; }
+        .global-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: linear-gradient(90deg, var(--c-main-dim), var(--c-main)); box-shadow: 0 0 20px var(--c-main); transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1), background 0.5s; }
+        .global-progress-text { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: var(--font-sys); font-size: 1.2rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 3px #000; z-index: 2; letter-spacing: 0.1em; }
 
         /* =========================================================
-           3. TASK CARDS (教科ごとのミッションパネル)
+           3. TASK CARDS
            ========================================================= */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+        .task-list { display: flex; flex-direction: column; gap: 20px; }
         
-        .card { background: var(--c-panel); border: 1px solid var(--c-main-dim); border-radius: 8px; padding: 25px; position: relative; overflow: hidden; backdrop-filter: blur(10px); transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--c-main), transparent); transform: translateX(-100%); transition: 0.5s; }
-        .card:hover { border-color: var(--c-main); box-shadow: 0 10px 30px rgba(0, 243, 255, 0.2); transform: translateY(-5px); }
-        .card:hover::before { transform: translateX(100%); }
-        .card.all-cleared { border-color: var(--c-success); box-shadow: 0 0 20px var(--c-success-dim); }
-        .card.all-cleared::before { background: linear-gradient(90deg, transparent, var(--c-success), transparent); }
-
-        .card-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px dashed var(--c-main-dim); padding-bottom: 10px; margin-bottom: 15px; transition: border-color 0.3s; }
-        .card.all-cleared .card-header { border-bottom-color: var(--c-success-dim); }
+        .task-card { background: var(--c-panel); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); backdrop-filter: blur(10px); transition: 0.4s; }
+        .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .subj-name { font-size: 1.2rem; font-weight: 900; color: #fff; }
+        .subj-meta { font-family: var(--font-sys); font-size: 0.8rem; color: #888; }
         
-        .subj-name { font-size: 1.5rem; font-weight: 900; color: #fff; }
-        .subj-date { font-family: var(--font-sys); font-size: 0.8rem; color: var(--c-main); background: var(--c-main-dim); padding: 2px 8px; border-radius: 4px; }
-        
-        /* タスク項目（チェックボックスギミック） */
-        .task-item { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; cursor: pointer; padding: 10px; border-radius: 6px; transition: 0.3s; background: rgba(255,255,255,0.02); border: 1px solid transparent; }
-        .task-item:hover { background: rgba(0, 243, 255, 0.05); border-color: var(--c-main-dim); }
-        
-        .checkbox { flex-shrink: 0; width: 24px; height: 24px; border: 2px solid var(--c-main); border-radius: 4px; position: relative; transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; justify-content: center; align-items: center; box-shadow: 0 0 10px var(--c-main-dim); }
-        .checkbox::after { content: '✓'; font-family: sans-serif; font-size: 18px; font-weight: bold; color: var(--c-bg); opacity: 0; transform: scale(0); transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        
-        .task-content { flex: 1; }
-        .task-text { font-size: 0.95rem; color: #ddd; transition: 0.3s; line-height: 1.4; margin-bottom: 5px; }
-        .task-deadline { font-family: var(--font-sys); font-size: 0.75rem; color: var(--c-warning); display: flex; align-items: center; gap: 5px; }
-        .task-deadline::before { content: 'DEADLINE:'; opacity: 0.7; }
-
-        /* チェックされた時の状態 */
-        .task-item.checked { background: rgba(0, 255, 102, 0.05); border-color: var(--c-success-dim); }
-        .task-item.checked .checkbox { background: var(--c-success); border-color: var(--c-success); box-shadow: 0 0 15px var(--c-success); transform: rotate(360deg); }
-        .task-item.checked .checkbox::after { opacity: 1; transform: scale(1); }
-        .task-item.checked .task-text { color: #555; text-decoration: line-through; }
-        .task-item.checked .task-deadline { color: #555; }
+        .task-desc { font-size: 0.95rem; color: #ddd; line-height: 1.5; margin-bottom: 15px; }
 
         /* =========================================================
-           4. SAVE NOTIFICATION (保存時のトースト演出)
+           4. STEP SLIDER
            ========================================================= */
-        #sync-toast { position: fixed; bottom: 30px; right: -300px; background: rgba(0, 243, 255, 0.1); border: 1px solid var(--c-main); border-left: 4px solid var(--c-main); padding: 15px 25px; font-family: var(--font-sys); color: var(--c-main); display: flex; align-items: center; gap: 15px; box-shadow: 0 0 20px var(--c-main-dim); z-index: 10000; transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); backdrop-filter: blur(5px); }
-        #sync-toast.show { right: 30px; }
-        .spinner { width: 16px; height: 16px; border: 2px solid transparent; border-top-color: var(--c-main); border-radius: 50%; animation: spin 1s linear infinite; }
+        .slider-track { width: 100%; height: 50px; background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 25px; position: relative; overflow: hidden; box-shadow: inset 0 5px 10px rgba(0,0,0,0.5); }
+        .slider-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--c-main-dim); opacity: 0.5; pointer-events: none; border-radius: 25px 0 0 25px; transition: background 0.3s; }
+        .slider-value-text { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-family: var(--font-sys); font-size: 1.1rem; color: #fff; pointer-events: none; letter-spacing: 0.1em; z-index: 1; text-shadow: 1px 1px 2px #000; }
         
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .slider-thumb { position: absolute; top: 3px; left: 3px; width: 42px; height: 42px; background: linear-gradient(135deg, #2a2d3e, #111424); border: 2px solid var(--c-main); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 10px var(--c-main-dim), inset 0 2px 5px rgba(255,255,255,0.2); z-index: 2; cursor: grab; touch-action: pan-y; transition: border-color 0.3s, background 0.3s, box-shadow 0.3s; }
+        .slider-thumb:active { cursor: grabbing; transform: scale(0.95); }
+
+        /* === 絵文字アニメーション === */
+        .emoji { font-size: 1.3rem; pointer-events: none; display: inline-block; transition: 0.2s; }
+        .lvl-0 { transform: scale(1); filter: grayscale(50%); }
+        .lvl-1 { animation: shake-light 0.5s infinite ease-in-out; }
+        .lvl-2 { animation: shake-hard 0.2s infinite ease-in-out; transform: scale(1.1); }
+        .lvl-3 { animation: shake-extreme 0.08s infinite linear; transform: scale(1.2); filter: drop-shadow(0 0 5px red); }
+        .lvl-4 { transform: scale(1.3); filter: drop-shadow(0 0 10px #00ff88); animation: none; }
+
+        @keyframes shake-light { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(1px, 1px) rotate(2deg); } 75% { transform: translate(-1px, -1px) rotate(-2deg); } }
+        @keyframes shake-hard { 0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.1); } 25% { transform: translate(-2px, 1px) rotate(-5deg) scale(1.1); } 75% { transform: translate(2px, -1px) rotate(5deg) scale(1.1); } }
+        @keyframes shake-extreme { 0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.2); } 25% { transform: translate(-3px, -2px) rotate(-8deg) scale(1.2); } 75% { transform: translate(3px, 2px) rotate(8deg) scale(1.2); } }
+
+        /* === 完了状態 === */
+        .task-card.completed { border-color: var(--c-success); box-shadow: 0 0 20px rgba(0,255,136,0.1); }
+        .task-card.completed .slider-track { border-color: var(--c-success); box-shadow: 0 0 15px rgba(0,255,136,0.2); }
+        .task-card.completed .task-desc { color: #556677; text-decoration: line-through; }
+
+        .particle { position: fixed; width: 6px; height: 6px; background: var(--c-success); border-radius: 50%; pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--c-success); }
     </style>
 </head>
 <body>
 
-    <!-- OVERLAYS -->
-    <canvas id="bg-canvas"></canvas>
-    <div class="vignette"></div>
+    <div class="bg-glow"></div>
     <div class="scanlines"></div>
 
     <div class="container">
         <!-- HEADER -->
         <header>
-            <div class="title-sys">> SYSTEM.OVERRIDE_</div>
-            <h1 class="title-main">3RD TERM FINAL EXAM</h1>
-            <div class="title-sys" style="font-size: 0.8rem; color: #888; text-shadow: none;">令和7年度 第2学年 期末考査 提出物管理ダッシュボード</div>
+            <div class="badge-today">当日提出専用</div>
+            <h1 class="title-main">TERM 3 EXAM</h1>
+            <div class="title-sys">> SLIDE TO RECORD PAGES</div>
         </header>
 
-        <!-- MAIN PROGRESS -->
-        <div class="progress-wrapper" id="progressWrapper">
-            <svg class="progress-svg" viewBox="0 0 300 300">
-                <circle class="progress-bg" cx="150" cy="150" r="130"></circle>
-                <circle class="progress-bar" id="progressBar" cx="150" cy="150" r="130"></circle>
-            </svg>
-            <div class="progress-text">
-                <div class="progress-val"><span id="progressNum">0</span><span>%</span></div>
-                <div class="progress-label">GLOBAL SYNC RATE</div>
-            </div>
+        <!-- GLOBAL PROGRESS -->
+        <div class="global-progress-box">
+            <div class="global-progress-fill" id="globalFill"></div>
+            <div class="global-progress-text" id="globalPercentTxt">0% - IN PROGRESS</div>
         </div>
 
-        <!-- TASK GRID -->
-        <div class="grid" id="taskGrid">
-            <!-- JavaScriptでここにカードが生成されます -->
-        </div>
-    </div>
-
-    <!-- SAVING TOAST -->
-    <div id="sync-toast">
-        <div class="spinner"></div>
-        <div>
-            <div style="font-size: 0.7rem; color:#888;">LOCAL_STORAGE</div>
-            <div style="font-weight: bold; font-size: 0.9rem;">DATA SYNCHRONIZED</div>
+        <!-- TASK LIST -->
+        <div class="task-list" id="taskList">
+            <!-- JSで生成 -->
         </div>
     </div>
 
     <script>
         // =========================================================
-        // 1. DATA (画像から抽出した提出物データ)
+        // 1. DATA (★数学を除外し、当日提出のみに限定)
         // =========================================================
         const subjects = [
-            {
-                id: 'pe', date: '25日(水)', name: '保健体育',
-                tasks: [ { id: 't_pe_1', desc: 'ノート：p.6〜7, p.10, p.24〜27, 30, 32〜37, 48', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'soc', date: '25日(水)', name: '社会',
-                tasks: [ { id: 't_soc_1', desc: '【歴史の学習】p.18〜23を【歴史の学習ノート】p.10〜12にして、答え合わせをして提出する', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'eng', date: '26日(木)', name: '英語',
-                tasks: [ { id: 't_eng_1', desc: 'エイゴラボ p.148〜160 答え合わせをする (早く終わったら授業で提出)', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'jp', date: '26日(木)', name: '国語',
-                tasks: [ { id: 't_jp_1', desc: 'ワーク P.95〜102、103、104、119、143、144〜159', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'mus', date: '26日(木)', name: '音楽',
-                tasks: [ { id: 't_mus_1', desc: 'ワーク p.23、44、49、55、56 (解説や教科書を参考に取り組む)', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'math', date: '27日(金)', name: '数学',
-                tasks: [ { id: 't_math_1', desc: 'ワーク P119まで', deadline: '★ 2月20日まで ★' } ]
-            },
-            {
-                id: 'tech', date: '27日(金)', name: '技術',
-                tasks: [ { id: 't_tech_1', desc: 'ノート P60〜61、69', deadline: 'テスト終了後の反省会' } ]
-            },
-            {
-                id: 'home', date: '27日(金)', name: '家庭科',
-                tasks: [
-                    { id: 't_home_1', desc: '【全員】ノート（消費生活）P4〜13、16〜21、36〜37⑤まで', deadline: 'テスト終了後の反省会' },
-                    { id: 't_home_2', desc: '【全員】ワーク P48〜50、62〜64', deadline: 'テスト終了後の反省会' },
-                    { id: 't_home_3', desc: '【未提出者】プリント2枚(冬休み課題等)、ノート(緑)P38〜40', deadline: 'テスト終了後の反省会' }
-                ]
-            },
-            {
-                id: 'sci', date: '27日(金)', name: '理科',
-                tasks: [ { id: 't_sci_1', desc: 'ワークP122〜137、34〜47をすべてやり、答え合わせ', deadline: 'テスト当日 (P122〜137先行提出可)' } ]
-            }
+            { id: 'pe', date: '25日', name: '🏀 保健体育', tasks: [{ id: 'pe_1', max: 15, unit: 'P', desc: 'ノート：p.6〜7, p.10, p.24〜27, 30, 32〜37, 48' }] },
+            { id: 'soc', date: '25日', name: '🗺️ 社会', tasks: [{ id: 'soc_1', max: 6, unit: 'P', desc: '【歴史の学習】p.18〜23をノート(p.10〜12)にして答え合わせ' }] },
+            { id: 'eng', date: '26日', name: '🔤 英語', tasks: [{ id: 'eng_1', max: 13, unit: 'P', desc: 'エイゴラボ p.148〜160 答え合わせをする' }] },
+            { id: 'jp', date: '26日', name: '⛩️ 国語', tasks: [{ id: 'jp_1', max: 28, unit: 'P', desc: 'ワーク P.95〜102、103、104、119、143、144〜159' }] },
+            { id: 'mus', date: '26日', name: '🎵 音楽', tasks: [{ id: 'mus_1', max: 5, unit: 'P', desc: 'ワーク p.23、44、49、55、56' }] },
+            { id: 'tech', date: '27日', name: '💻 技術', tasks: [{ id: 'tech_1', max: 3, unit: 'P', desc: 'ノート P60〜61、69' }] },
+            { id: 'home', date: '27日', name: '🍳 家庭科', tasks: [
+                { id: 'home_1', max: 18, unit: 'P', desc: 'ノート（消費生活）P4〜13、16〜21、36〜37' },
+                { id: 'home_2', max: 6, unit: 'P', desc: 'ワーク P48〜50、62〜64' }
+            ]},
+            { id: 'sci', date: '27日', name: '🧪 理科', tasks: [{ id: 'sci_1', max: 30, unit: 'P', desc: 'ワークP122〜137、34〜47をすべてやり、答え合わせ' }] }
         ];
 
+        let totalPages = 0;
+        subjects.forEach(s => s.tasks.forEach(t => totalPages += t.max));
+
         // =========================================================
-        // 2. AUDIO ENGINE (サイバーな操作音を生成)
+        // 2. AUDIO ENGINE
         // =========================================================
         const AudioEngine = (() => {
             let ctx = null;
@@ -206,205 +150,232 @@
             };
             return {
                 init,
-                check: () => play(1200, 'sine', 0.1, 0.1),
-                uncheck: () => play(400, 'square', 0.1, 0.05),
-                complete: () => { play(800, 'sine', 0.1, 0.1); setTimeout(()=>play(1200, 'sine', 0.2, 0.1), 100); setTimeout(()=>play(1600, 'sine', 0.4, 0.1), 200); }
+                tick: () => play(1800, 'triangle', 0.02, 0.015), 
+                snap: () => play(800, 'square', 0.05, 0.05),
+                lock: () => { play(1500, 'square', 0.1, 0.1); setTimeout(()=>play(2000, 'sine', 0.1, 0.1), 50); },
+                completeAll: () => { play(800, 'sine', 0.1, 0.1); setTimeout(()=>play(1200, 'sine', 0.1, 0.1), 100); setTimeout(()=>play(1600, 'sine', 0.5, 0.2), 200); }
             };
         })();
 
         // =========================================================
-        // 3. UI GENERATION & LOGIC
+        // 3. UI GENERATION
         // =========================================================
-        const grid = document.getElementById('taskGrid');
-        const progressBar = document.getElementById('progressBar');
-        const progressNum = document.getElementById('progressNum');
-        const progressWrapper = document.getElementById('progressWrapper');
-        const toast = document.getElementById('sync-toast');
-        
-        // LocalStorageからセーブデータを読み込む
-        const STORAGE_KEY = 'exam_mission_save_data';
+        const taskList = document.getElementById('taskList');
+        // 保存キーを新しくし、以前のデータ（数学含む）と混ざらないようにする
+        const STORAGE_KEY = 'exam_app_progress_today_only';
         let savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        let totalTasks = 0;
 
-        // カードとタスクの生成
         subjects.forEach(subj => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.id = `card_${subj.id}`;
-            
-            let tasksHtml = '';
             subj.tasks.forEach(t => {
-                totalTasks++;
-                const isChecked = savedData[t.id] ? 'checked' : '';
-                tasksHtml += `
-                    <div class="task-item ${isChecked}" data-id="${t.id}" data-parent="card_${subj.id}">
-                        <div class="checkbox"></div>
-                        <div class="task-content">
-                            <div class="task-text">${t.desc}</div>
-                            <div class="task-deadline">${t.deadline}</div>
+                const currentVal = savedData[t.id] || 0;
+                const isCompleted = currentVal === t.max ? 'completed' : '';
+                
+                const card = document.createElement('div');
+                card.className = `task-card ${isCompleted}`;
+                card.id = `card_${t.id}`;
+                card.setAttribute('data-max', t.max);
+                
+                card.innerHTML = `
+                    <div class="task-header">
+                        <div class="subj-name">${subj.name}</div>
+                        <div class="subj-meta">〆 ${subj.date} (当日) | TOTAL: ${t.max}${t.unit}</div>
+                    </div>
+                    <div class="task-desc">${t.desc}</div>
+                    
+                    <div class="slider-track" id="track_${t.id}">
+                        <div class="slider-fill" id="fill_${t.id}"></div>
+                        <div class="slider-value-text" id="text_${t.id}">${currentVal} / ${t.max} ${t.unit}</div>
+                        <div class="slider-thumb" id="thumb_${t.id}">
+                            <span class="emoji" id="emoji_${t.id}">🥱</span>
                         </div>
                     </div>
                 `;
+                taskList.appendChild(card);
             });
-
-            card.innerHTML = `
-                <div class="card-header">
-                    <div class="subj-name">${subj.name}</div>
-                    <div class="subj-date">${subj.date}</div>
-                </div>
-                ${tasksHtml}
-            `;
-            grid.appendChild(card);
         });
 
-        // 進捗の計算と描画アニメーション
-        let currentPercent = 0;
-        function updateProgress() {
-            const checkedBoxes = document.querySelectorAll('.task-item.checked').length;
-            const targetPercent = Math.round((checkedBoxes / totalTasks) * 100);
-            
-            // 円形ゲージの更新 (Dash array max: 816)
-            const offset = 816 - (816 * targetPercent) / 100;
-            progressBar.style.strokeDashoffset = offset;
+        // =========================================================
+        // 4. SLIDER LOGIC
+        // =========================================================
+        document.body.addEventListener('touchstart', AudioEngine.init, { once: true });
+        document.body.addEventListener('click', AudioEngine.init, { once: true });
 
-            // 数字のカウントアップアニメーション（スロット風）
-            const duration = 1000; 
-            const startTime = performance.now();
-            const startVal = currentPercent;
+        const thumbs = document.querySelectorAll('.slider-thumb');
+
+        const updateUIState = (taskId, currentVal, maxVal) => {
+            const percent = currentVal / maxVal;
+            const emoji = document.getElementById(`emoji_${taskId}`);
+            const fill = document.getElementById(`fill_${taskId}`);
+            const thumb = document.getElementById(`thumb_${taskId}`);
+            const card = document.getElementById(`card_${taskId}`);
+            const text = document.getElementById(`text_${taskId}`);
             
-            function animateNum(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                // イージング
-                const easeOut = 1 - Math.pow(1 - progress, 3);
+            text.innerText = `${currentVal} / ${maxVal} ${currentVal === maxVal ? 'DONE' : 'P'}`;
+            emoji.className = 'emoji'; 
+            
+            if (percent === 0) {
+                emoji.innerText = '🥱'; emoji.classList.add('lvl-0');
+                fill.style.background = 'var(--c-main-dim)'; thumb.style.borderColor = 'var(--c-main)';
+                card.classList.remove('completed');
+            } else if (percent < 0.3) {
+                emoji.innerText = '🥺'; emoji.classList.add('lvl-1');
+                fill.style.background = 'rgba(255, 200, 0, 0.5)'; thumb.style.borderColor = '#ffcc00';
+                card.classList.remove('completed');
+            } else if (percent < 0.7) {
+                emoji.innerText = '💦'; emoji.classList.add('lvl-2');
+                fill.style.background = 'rgba(255, 120, 0, 0.7)'; thumb.style.borderColor = '#ff7700';
+                card.classList.remove('completed');
+            } else if (percent < 1.0) {
+                emoji.innerText = '🤬'; emoji.classList.add('lvl-3');
+                fill.style.background = 'rgba(255, 0, 0, 0.8)'; thumb.style.borderColor = '#ff0000';
+                card.classList.remove('completed');
+            } else {
+                emoji.innerText = '🤩✨'; emoji.classList.add('lvl-4');
+                fill.style.background = 'var(--c-success)'; thumb.style.borderColor = 'var(--c-success)'; thumb.style.background = '#1a3322';
+                card.classList.add('completed');
+            }
+        };
+
+        const spawnParticles = (rect) => {
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            for(let i=0; i<15; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle'; document.body.appendChild(p);
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 50 + Math.random() * 80;
+                p.style.left = `${centerX}px`; p.style.top = `${centerY}px`;
+                p.animate([
+                    { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                    { transform: `translate(${Math.cos(angle)*velocity}px, ${Math.sin(angle)*velocity}px) scale(0)`, opacity: 0 }
+                ], { duration: 600 + Math.random()*400, easing: 'ease-out' });
+                setTimeout(() => p.remove(), 1000);
+            }
+        };
+
+        thumbs.forEach(thumb => {
+            const taskId = thumb.id.replace('thumb_', '');
+            const track = document.getElementById(`track_${taskId}`);
+            const fill = document.getElementById(`fill_${taskId}`);
+            const maxVal = parseInt(document.getElementById(`card_${taskId}`).getAttribute('data-max'));
+            
+            let isDragging = false;
+            let startX = 0, currentX = 0, maxDrag = 0;
+            let currentDisplayVal = savedData[taskId] || 0;
+
+            const initSetup = () => {
+                maxDrag = track.offsetWidth - thumb.offsetWidth - 6;
+                const initX = (currentDisplayVal / maxVal) * maxDrag;
+                thumb.style.transform = `translateX(${initX}px)`;
+                fill.style.width = `${(currentDisplayVal / maxVal) * 100}%`;
+                updateUIState(taskId, currentDisplayVal, maxVal);
+            };
+            setTimeout(initSetup, 100);
+
+            thumb.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                maxDrag = track.offsetWidth - thumb.offsetWidth - 6;
+                currentX = (currentDisplayVal / maxVal) * maxDrag;
+                startX = e.clientX - currentX;
                 
-                currentPercent = Math.floor(startVal + (targetPercent - startVal) * easeOut);
-                progressNum.innerText = currentPercent;
+                thumb.style.transition = 'none'; fill.style.transition = 'none';
+                thumb.setPointerCapture(e.pointerId);
+            });
 
-                if (progress < 1) {
-                    requestAnimationFrame(animateNum);
+            thumb.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                
+                currentX = e.clientX - startX;
+                if (currentX < 0) currentX = 0;
+                if (currentX > maxDrag) currentX = maxDrag;
+
+                let newVal = Math.round((currentX / maxDrag) * maxVal);
+                
+                if (newVal !== currentDisplayVal) {
+                    currentDisplayVal = newVal;
+                    updateUIState(taskId, currentDisplayVal, maxVal);
+                    AudioEngine.tick();
+                }
+
+                thumb.style.transform = `translateX(${currentX}px)`;
+                fill.style.width = `${(currentX / maxDrag) * 100}%`;
+            });
+
+            thumb.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                const snapX = (currentDisplayVal / maxVal) * maxDrag;
+                
+                thumb.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                fill.style.transition = 'width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                
+                thumb.style.transform = `translateX(${snapX}px)`;
+                fill.style.width = `${(currentDisplayVal / maxVal) * 100}%`;
+
+                if (currentDisplayVal > 0) {
+                    savedData[taskId] = currentDisplayVal;
                 } else {
-                    currentPercent = targetPercent;
-                    checkAllCleared(targetPercent);
+                    delete savedData[taskId];
+                }
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
+
+                if (currentDisplayVal === maxVal) {
+                    AudioEngine.lock();
+                    spawnParticles(thumb.getBoundingClientRect());
+                } else {
+                    AudioEngine.snap();
+                }
+
+                updateGlobalProgress();
+            });
+        });
+
+        // =========================================================
+        // 5. GLOBAL PROGRESS CALCULATION
+        // =========================================================
+        const globalFill = document.getElementById('globalFill');
+        const globalPercentTxt = document.getElementById('globalPercentTxt');
+
+        function updateGlobalProgress() {
+            let totalCompletedPages = 0;
+            Object.values(savedData).forEach(val => totalCompletedPages += val);
+
+            let percent = Math.round((totalCompletedPages / totalPages) * 100);
+            if (percent > 100) percent = 100;
+
+            globalFill.style.width = `${percent}%`;
+            
+            let start = parseInt(globalPercentTxt.innerText) || 0;
+            let duration = 800;
+            let startTime = performance.now();
+            
+            function animateNum(time) {
+                let p = Math.min((time - startTime) / duration, 1);
+                let current = Math.floor(start + (percent - start) * (1 - Math.pow(1 - p, 3)));
+                
+                if (percent === 100) {
+                    globalPercentTxt.innerText = `100% - ALL CLEAR!!`;
+                } else {
+                    globalPercentTxt.innerText = `${current}% - IN PROGRESS`;
+                }
+                
+                if (p < 1) requestAnimationFrame(animateNum);
+                else {
+                    if(percent === 100) {
+                        AudioEngine.completeAll();
+                        globalFill.style.background = 'var(--c-success)';
+                        globalPercentTxt.style.color = 'var(--c-success)';
+                    } else {
+                        globalFill.style.background = '';
+                        globalPercentTxt.style.color = '#fff';
+                    }
                 }
             }
             requestAnimationFrame(animateNum);
-
-            // 各カードがコンプリートされたかどうかの判定
-            subjects.forEach(subj => {
-                const card = document.getElementById(`card_${subj.id}`);
-                const tasksInCard = card.querySelectorAll('.task-item');
-                const checkedInCard = card.querySelectorAll('.task-item.checked');
-                if (tasksInCard.length === checkedInCard.length && tasksInCard.length > 0) {
-                    card.classList.add('all-cleared');
-                } else {
-                    card.classList.remove('all-cleared');
-                }
-            });
         }
 
-        // 全タスク完了時のエフェクト
-        function checkAllCleared(percent) {
-            if (percent === 100) {
-                AudioEngine.complete();
-                progressBar.style.stroke = 'var(--c-success)';
-                progressNum.style.color = 'var(--c-success)';
-                progressNum.style.textShadow = '0 0 30px var(--c-success)';
-                progressWrapper.querySelector('.progress-svg').style.filter = 'drop-shadow(0 0 30px var(--c-success))';
-                progressWrapper.querySelector('.progress-label').style.color = 'var(--c-success)';
-                progressWrapper.querySelector('.progress-label').innerText = 'MISSION ACCOMPLISHED';
-            } else {
-                progressBar.style.stroke = 'var(--c-main)';
-                progressNum.style.color = '#fff';
-                progressNum.style.textShadow = '0 0 20px var(--c-main)';
-                progressWrapper.querySelector('.progress-svg').style.filter = 'drop-shadow(0 0 15px var(--c-main))';
-                progressWrapper.querySelector('.progress-label').style.color = 'var(--c-main)';
-                progressWrapper.querySelector('.progress-label').innerText = 'GLOBAL SYNC RATE';
-            }
-        }
-
-        // 保存（LocalStorage）とトースト通知
-        let toastTimeout;
-        function saveData() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
-            
-            // トースト表示
-            clearTimeout(toastTimeout);
-            toast.classList.add('show');
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
-        }
-
-        // クリックイベントの登録
-        document.body.addEventListener('click', AudioEngine.init, { once: true });
-
-        document.querySelectorAll('.task-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const taskId = this.getAttribute('data-id');
-                const isChecked = this.classList.contains('checked');
-                
-                if (isChecked) {
-                    this.classList.remove('checked');
-                    delete savedData[taskId];
-                    AudioEngine.uncheck();
-                } else {
-                    this.classList.add('checked');
-                    savedData[taskId] = true;
-                    AudioEngine.check();
-                }
-                
-                updateProgress();
-                saveData();
-            });
-        });
-
-        // 初回ロード時の描画
-        updateProgress();
-
-        // =========================================================
-        // 4. BACKGROUND CANVAS (サイバーなドット/マトリックス背景)
-        // =========================================================
-        const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let w, h, particles = [];
-
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Dot {
-            constructor() {
-                this.x = Math.random() * w; this.y = Math.random() * h;
-                this.vy = Math.random() * 0.5 + 0.1;
-                this.size = Math.random() * 1.5;
-                this.alpha = Math.random() * 0.5;
-            }
-            update() {
-                this.y += this.vy;
-                if (this.y > h) this.y = 0;
-            }
-            draw() {
-                ctx.fillStyle = `rgba(0, 243, 255, ${this.alpha})`;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-            }
-        }
-        for (let i = 0; i < 150; i++) particles.push(new Dot());
-
-        function animateBg() {
-            ctx.clearRect(0, 0, w, h);
-            
-            // うっすらとした縦ライン（データストリーム）
-            ctx.fillStyle = 'rgba(0, 243, 255, 0.02)';
-            for(let i=0; i<w; i+=50) { ctx.fillRect(i, 0, 1, h); }
-            
-            particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animateBg);
-        }
-        animateBg();
+        updateGlobalProgress();
 
     </script>
 </body>
